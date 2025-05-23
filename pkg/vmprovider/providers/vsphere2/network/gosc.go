@@ -36,7 +36,9 @@ func GuestOSCustomization(results NetworkInterfaceResults) ([]vimtypes.Customiza
 
 				adapter.Ip = &vimtypes.CustomizationFixedIp{IpAddress: ip.String()}
 				adapter.SubnetMask = net.IP(subnetMask).String()
-				adapter.Gateway = []string{ipConfig.Gateway}
+				if ipConfig.Gateway != "" {
+					adapter.Gateway = []string{ipConfig.Gateway}
+				}
 				break
 			}
 		}
@@ -66,7 +68,9 @@ func GuestOSCustomization(results NetworkInterfaceResults) ([]vimtypes.Customiza
 					IpAddress:  ip.String(),
 					SubnetMask: int32(ones),
 				})
-				adapter.IpV6Spec.Gateway = append(adapter.IpV6Spec.Gateway, ipConfig.Gateway)
+				if ipConfig.Gateway != "" {
+					adapter.IpV6Spec.Gateway = append(adapter.IpV6Spec.Gateway, ipConfig.Gateway)
+				}
 			}
 		}
 

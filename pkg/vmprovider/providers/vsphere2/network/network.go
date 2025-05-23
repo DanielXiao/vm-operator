@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	vpcv1alpha1 "github.com/vmware-tanzu/nsx-operator/pkg/apis/nsx.vmware.com/v1alpha1"
+
 	ncpv1alpha1 "github.com/vmware-tanzu/vm-operator/external/ncp/api/v1alpha1"
 	netopv1alpha1 "github.com/vmware-tanzu/vm-operator/external/net-operator/api/v1alpha1"
 
@@ -73,6 +74,7 @@ type NetworkInterfaceRoute struct {
 const (
 	retryInterval           = 100 * time.Millisecond
 	defaultEthernetCardType = "vmxnet3"
+	gatewayIgnored          = "None"
 
 	// VMNameLabel is the label put on a network interface CR that identifies its VM by name.
 	VMNameLabel = pkg.VMOperatorKey + "/vm-name"
@@ -188,13 +190,32 @@ func applyInterfaceSpecToResult(
 
 			if ipConfig.IsIPv4 {
 				dhcp4 = false
-				ipConfig.Gateway = interfaceSpec.Gateway4
+				if interfaceSpec.Gateway4 == gatewayIgnored {
+					ipConfig.Gateway = ""
+				} else {
+					ipConfig.Gateway = interfaceSpec.Gateway4
+				}
 			} else {
 				dhcp6 = false
-				ipConfig.Gateway = interfaceSpec.Gateway6
+				if interfaceSpec.Gateway6 == gatewayIgnored {
+					ipConfig.Gateway = ""
+				} else {
+					ipConfig.Gateway = interfaceSpec.Gateway6
+				}
 			}
 
 			result.IPConfigs = append(result.IPConfigs, ipConfig)
+		}
+	} else {
+		gw4Disabled := interfaceSpec.Gateway4 == gatewayIgnored
+		gw6Disabled := interfaceSpec.Gateway6 == gatewayIgnored
+
+		if gw4Disabled || gw6Disabled {
+			for i := range result.IPConfigs {
+				if (gw4Disabled && result.IPConfigs[i].IsIPv4) || (gw6Disabled && !result.IPConfigs[i].IsIPv4) {
+					result.IPConfigs[i].Gateway = ""
+				}
+			}
 		}
 	}
 
@@ -810,7 +831,7 @@ func ApplyInterfaceResultToVirtualEthCard(
 		// Otherwise, IMO a foot gun and will break on setups that enforce MAC filtering.
 		ethCard.MacAddress = result.MacAddress
 		ethCard.AddressType = string(vimtypes.VirtualEthernetCardMacTypeManual)
-	} else { //nolint
+	} else { // nolint
 		// BMV: IMO this must be Generated/TypeAssigned to avoid major foot gun, but we have tests assuming
 		// this is left as-is.
 		// We should have a MAC address field to the VM.Spec if we want this to be specified by the user.

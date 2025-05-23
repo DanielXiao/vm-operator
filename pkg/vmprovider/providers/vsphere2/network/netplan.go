@@ -68,8 +68,10 @@ func NetPlanCustomization(result NetworkInterfaceResults) (*Netplan, error) {
 		if !npEth.Dhcp4 {
 			for _, ipConfig := range r.IPConfigs {
 				if ipConfig.IsIPv4 {
-					if npEth.Gateway4 == "" {
-						npEth.Gateway4 = ipConfig.Gateway
+					if ipConfig.Gateway != "" {
+						if npEth.Gateway4 == "" {
+							npEth.Gateway4 = ipConfig.Gateway
+						}
 					}
 					npEth.Addresses = append(npEth.Addresses, ipConfig.IPCIDR)
 				}
@@ -78,8 +80,10 @@ func NetPlanCustomization(result NetworkInterfaceResults) (*Netplan, error) {
 		if !npEth.Dhcp6 {
 			for _, ipConfig := range r.IPConfigs {
 				if !ipConfig.IsIPv4 {
-					if npEth.Gateway6 == "" {
-						npEth.Gateway6 = ipConfig.Gateway
+					if ipConfig.Gateway != "" {
+						if npEth.Gateway6 == "" {
+							npEth.Gateway6 = ipConfig.Gateway
+						}
 					}
 					npEth.Addresses = append(npEth.Addresses, ipConfig.IPCIDR)
 				}
